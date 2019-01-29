@@ -126,28 +126,28 @@ class KnowledgeBase(object):
             None
         """
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
-        count_fact = len(fact_or_rule.supports_facts)
-        count_rule = len(fact_or_rule.supports_rules) 
-        index = self.facts.index(fact_or_rule)
-        if (fact_or_rule.asserted == True) and (len(fact_or_rule.supported_by) == 0):
-            del(self.facts[index])
-        elif (fact_or_rule.asserted == False):
-            for i in range(0, count_fact):
-                supported_fact = fact_or_rule.supports_facts[i]
-                if (len(supported_fact.supported_by) == 1):
-                    index_of_supported_fact = self.facts.index(supported_fact)
-                    del(self.facts[index])
-                    del(self.facts[index_of_supported_fact])
-                else:
-                    del(self.facts[index])
-            for i in range(0, count_rule):
-                supported_rule = fact_or_rule.supports_rules[i]
-                if (len(supported_rule.supported_by) == 1):
-                    index_of_supported_rule = self.rules.index(supported_rule)
-                    del(self.facts[index])
-                    del(self.rules[index_of_supported_rule])
-                else:
-                    del(self.facts[index])
+        #count_fact = len(fact_or_rule.supports_facts)
+        #count_rule = len(fact_or_rule.supports_rules) 
+        #index = self.facts.index(fact_or_rule)
+        #if (fact_or_rule.asserted == True) and (len(fact_or_rule.supported_by) == 0):
+        #    del(self.facts[index])
+        #elif (fact_or_rule.asserted == False):
+        #    for i in range(0, count_fact):
+        #        supported_fact = fact_or_rule.supports_facts[i]
+        #        if (len(supported_fact.supported_by) == 1):
+        #            index_of_supported_fact = self.facts.index(supported_fact)
+        #            del(self.facts[index])
+        #            del(self.facts[index_of_supported_fact])
+        #        else:
+        #            del(self.facts[index])
+        #    for i in range(0, count_rule):
+        #        supported_rule = fact_or_rule.supports_rules[i]
+        #        if (len(supported_rule.supported_by) == 1):
+        #            index_of_supported_rule = self.rules.index(supported_rule)
+        #            del(self.facts[index])
+        #            del(self.rules[index_of_supported_rule])
+        #        else:
+        #            del(self.facts[index])
 
         
         
@@ -166,12 +166,38 @@ class InferenceEngine(object):
         """
         printv('Attempting to infer from {!r} and {!r} => {!r}', 1, verbose,
             [fact.statement, rule.lhs, rule.rhs])
-        ####################################################
-        if len(rule.lhs == 1):
-            binding = match(rule.lhs[0], fact.statement)
-            if type(binding) is not bool:
-                new_fact = Fact(instantiate(rule.lhs[0], binding))
-                kb.facts.append(new_fact)
+        count = len(rule.lhs)
+        lhs = []
+        rhs = []
+        if (count == 1):
+            bindings = match(rule.lhs[0], fact.statement)
+            if type(bindings) is not bool:
+                print(rule.rhs)
+                new_statement = instantiate(rule.rhs, bindings)
+                new_fact = Fact(new_statement)
+                fact.supports_facts.append(new_fact)
+                rule.supports_facts.append(new_fact)
+                new_fact.supported_by.append((fact, rule))
+                print(rule)
+                kb.rules.append(rule)
+        else:
+            for i in range(1, count):
+                bindings = match(rule.lhs[i], fact.statement)
+                if type(bindings) is not bool:
+                    lhs.append(instantiate(rule.lhs[i], bindings))
+                brhs = match(rule.rhs, fact.statement)
+                if type(brhs) is not bool:
+                    rhs.append(instantiate(rule.rhs, brhs))
+                new_rule = Rule([lhs, rhs])
+                rule.supports_rules.append(new_rule)
+                fact.supports_rules.append(new_rule)
+                new_rule.supported_by.append((fact, rule))
+                print(new_rule)
+                kb.rules.append(new_rule)
+
+
+
+
 
         #binding = match(rule.lhs[0], fact.statement)
         #if type(binding) is not bool:

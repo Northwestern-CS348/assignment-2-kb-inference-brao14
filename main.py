@@ -15,12 +15,12 @@ class KBTest(unittest.TestCase):
             if isinstance(item, Fact) or isinstance(item, Rule):
                 self.KB.kb_assert(item)
         
-    #def test1(self):
-    #    # Did the student code contain syntax errors, AttributeError, etc.
-    #    ask1 = read.parse_input("fact: (motherof ada ?X)")
-    #    # print(' Asking if', ask1)
-    #    answer = self.KB.kb_ask(ask1)
-    #    self.assertEqual(str(answer[0]), "?X : bing")
+    def test1(self):
+        # Did the student code contain syntax errors, AttributeError, etc.
+        ask1 = read.parse_input("fact: (motherof ada ?X)")
+        # print(' Asking if', ask1)
+        answer = self.KB.kb_ask(ask1)
+        self.assertEqual(str(answer[0]), "?X : bing")
 
     def test2(self):
         # Can fc_infer actually infer
