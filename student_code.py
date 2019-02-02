@@ -116,97 +116,100 @@ class KnowledgeBase(object):
             print("Invalid ask:", fact.statement)
             return []
 
+
     def kb_retract(self, fact_or_rule):
         """Retract a fact from the KB
-
         Args:
             fact (Fact) - Fact to be retracted
-
         Returns:
             None
         """
         printv("Retracting {!r}", 0, verbose, [fact_or_rule])
-        #count_fact = len(fact_or_rule.supports_facts)
-        #count_rule = len(fact_or_rule.supports_rules) 
-        #index = self.facts.index(fact_or_rule)
-        #if (fact_or_rule.asserted == True) and (len(fact_or_rule.supported_by) == 0):
-        #    del(self.facts[index])
-        #elif (fact_or_rule.asserted == False):
-        #    for i in range(0, count_fact):
-        #        supported_fact = fact_or_rule.supports_facts[i]
-        #        if (len(supported_fact.supported_by) == 1):
-        #            index_of_supported_fact = self.facts.index(supported_fact)
-        #            del(self.facts[index])
-        #            del(self.facts[index_of_supported_fact])
-        #        else:
-        #            del(self.facts[index])
-        #    for i in range(0, count_rule):
-        #        supported_rule = fact_or_rule.supports_rules[i]
-        #        if (len(supported_rule.supported_by) == 1):
-        #            index_of_supported_rule = self.rules.index(supported_rule)
-        #            del(self.facts[index])
-        #            del(self.rules[index_of_supported_rule])
-        #        else:
-        #            del(self.facts[index])
-
-        
+        if isinstance(fact_or_rule, Rule):
+            if fact_or_rule.asserted:
+                return
+            else:
+                rule = self._get_rule(fact_or_rule)
+                if not rule.supported_by:
+                    for supported_fact in rule.supports_facts:
+                        for combo in supported_fact.supported_by:
+                            if rule in combo:
+                                kb_fact = self._get_fact(combo[0])
+                                kb_supported_fact = self._get_fact(supported_fact)
+                                kb_fact.supports_facts.remove(supported_fact)
+                                kb_supported_fact.supported_by.remove(combo)
+                        if not kb_supported_fact.supported_by:
+                            self.kb_retract(kb_supported_fact)
+                    for supported_rule in rule.supports_rules:
+                        for combo in supported_rule.supported_by:
+                            if rule in combo:
+                                kb_fact = self._get_rule(combo[0])
+                                kb_supported_rule = self._get_rule(supported_rule)
+                                kb_fact.supports_facts.remove(supported_rule)
+                                kb_supported_rule.supported_by.remove(combo)
+                        if not kb_supported_rule.asserted:
+                            self.kb_retract(kb_supported_rule)
+                    self.rules.remove(rule)
+        elif isinstance(fact_or_rule, Fact):
+            fact = self._get_fact(fact_or_rule)
+            if fact.asserted and fact.supported_by:
+                return
+            if not fact.supported_by:
+                for supported_fact in fact.supports_facts:
+                    for combo in supported_fact.supported_by:
+                        if fact in combo:
+                            kb_rule = self._get_rule(combo[1])
+                            kb_supported_fact = self._get_fact(supported_fact)
+                            kb_rule.supports_facts.remove(supported_fact)
+                            kb_supported_fact.supported_by.remove(combo)
+                    if not kb_supported_fact.supported_by:
+                        self.kb_retract(kb_supported_fact)
+                for supported_rule in fact.supports_rules:
+                    for combo in supported_rule.supported_by:
+                        if fact in combo:
+                            kb_rule = self._get_rule(combo[1])
+                            kb_supported_rule = self._get_rule(supported_rule)
+                            kb_rule.supports_rules.remove(supported_rule)    
+                            kb_supported_rule.supported_by.remove(combo)
+                    if not kb_supported_rule.asserted:
+                        self.kb_retract(kb_supported_rule)
+                self.facts.remove(fact)
+            else:
+                return
+        return        
         
 
 class InferenceEngine(object):
     def fc_infer(self, fact, rule, kb):
         """Forward-chaining to infer new facts and rules
-
         Args:
             fact (Fact) - A fact from the KnowledgeBase
             rule (Rule) - A rule from the KnowledgeBase
             kb (KnowledgeBase) - A KnowledgeBase
-
         Returns:
-            Nothing            
+            Nothing
         """
         printv('Attempting to infer from {!r} and {!r} => {!r}', 1, verbose,
             [fact.statement, rule.lhs, rule.rhs])
-        count = len(rule.lhs)
-        lhs = []
-        rhs = []
-        if (count == 1):
-            bindings = match(rule.lhs[0], fact.statement)
-            if type(bindings) is not bool:
-                print(rule.rhs)
-                new_statement = instantiate(rule.rhs, bindings)
-                new_fact = Fact(new_statement)
-                fact.supports_facts.append(new_fact)
-                rule.supports_facts.append(new_fact)
-                new_fact.supported_by.append((fact, rule))
-                print(rule)
-                kb.rules.append(rule)
+        first_statement = rule.lhs[0]
+        binding = match(fact.statement, first_statement)
+        bindings_list = []
+        if binding:
+            for statement in rule.lhs[1:]:
+                new_statement = instantiate(statement, binding)
+                bindings_list.append(new_statement)
+            rhs_statements = instantiate(rule.rhs, binding)
         else:
-            for i in range(1, count):
-                bindings = match(rule.lhs[i], fact.statement)
-                if type(bindings) is not bool:
-                    lhs.append(instantiate(rule.lhs[i], bindings))
-                brhs = match(rule.rhs, fact.statement)
-                if type(brhs) is not bool:
-                    rhs.append(instantiate(rule.rhs, brhs))
-                new_rule = Rule([lhs, rhs])
-                rule.supports_rules.append(new_rule)
-                fact.supports_rules.append(new_rule)
-                new_rule.supported_by.append((fact, rule))
-                print(new_rule)
-                kb.rules.append(new_rule)
-
-
-
-
-
-        #binding = match(rule.lhs[0], fact.statement)
-        #if type(binding) is not bool:
-        #    new_fact =  Fact(instantiate(rule.lhs[0], binding))
-        #    print(new_fact)
-            #print(rule.rhs)
-            #rule.supported_by.append(fact)
-        #    #fact.supports_rules.append(rule)
-        #    kb.rules.append(new_fact)    
-
-                
+            return
+        if len(rule.lhs) == 1:
+            new_fact = Fact(rhs_statements, [[fact, rule]])
+            rule.supports_facts.append(new_fact)
+            fact.supports_facts.append(new_fact)
+            kb.kb_assert(new_fact)
+        else:
+            new_rule = Rule([bindings_list, rhs_statements], [[fact, rule]])
+            rule.supports_rules.append(new_rule)
+            fact.supports_rules.append(new_rule)
+            kb.kb_assert(new_rule)
+        return                
 
